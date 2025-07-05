@@ -2,7 +2,7 @@
 
 A full-stack application for scheduling SMS messages with Next.js frontend, Golang backend, and Twilio integration.
 
-![Screenshot](public/image.png) <!-- Add a screenshot if available -->
+![Screenshot](/sms-scheduler-frontend/public/image.png) <!-- Add a screenshot if available -->
 
 ## Features
 
