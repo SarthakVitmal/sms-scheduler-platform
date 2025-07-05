@@ -41,7 +41,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 font-[Montserrat]">
+    <div className="min-h-screen bg-gradient-to-br from-blue-200 to-purple-50 font-[Montserrat]">
       <Toaster 
         position="top-center"
         toastOptions={{

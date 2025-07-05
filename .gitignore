@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/sms-scheduler-frontend/node_modules
+
 /.pnp
 .pnp.*
 .yarn/*
@@ -15,6 +17,7 @@
 
 # next.js
 /.next/
+/sms-scheduler-frontend/.next/
 /out/
 
 # production
@@ -32,7 +35,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-
+backend/.env
 # vercel
 .vercel
 

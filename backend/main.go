@@ -6,11 +6,15 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
+	"github.com/twilio/twilio-go"
+	api "github.com/twilio/twilio-go/rest/api/v2010"
 	"gorm.io/driver/sqlite"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +29,15 @@ type Message struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type TwilioConfig struct {
+	AccountSID string
+	AuthToken  string
+	FromNumber string
+}
+
+var twilioClient *twilio.RestClient
+var twilioConfig TwilioConfig
+
 // ScheduleMessageRequest represents the request body for scheduling a message
 type ScheduleMessageRequest struct {
 	PhoneNumber string `json:"phone_number" binding:"required"`
@@ -36,6 +49,9 @@ var db *gorm.DB
 var scheduler *cron.Cron
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+    log.Println("No .env file found, using system environment variables")
+}
 	// Initialize database
 	initDB()
 
@@ -59,8 +75,25 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Initialize Twilio client
+	twilioConfig = TwilioConfig{
+		AccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
+		AuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		FromNumber: os.Getenv("TWILIO_PHONE_NUMBER"),
+	}
+
+	if twilioConfig.AccountSID == "" || twilioConfig.AuthToken == "" || twilioConfig.FromNumber == "" {
+		log.Fatal("Twilio configuration missing. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER environment variables")
+	}
+
+	twilioClient = twilio.NewRestClientWithParams(twilio.ClientParams{
+		Username: twilioConfig.AccountSID,
+		Password: twilioConfig.AuthToken,
+	})
+
 	// Routes
 	r.POST("/api/schedule", scheduleMessage)
+	r.POST("/api/message-status", handleMessageStatus)
 	r.GET("/api/messages", getMessages)
 	r.PUT("/api/messages/:id", updateMessage)
 	r.DELETE("/api/messages/:id", deleteMessage)
@@ -208,6 +241,35 @@ func deleteMessage(c *gin.Context) {
 	})
 }
 
+
+// handleMessageStatus receives status updates from Twilio
+func handleMessageStatus(c *gin.Context) {
+    var status struct {
+        MessageSID string `form:"MessageSid"`
+        Status     string `form:"MessageStatus"`
+        To         string `form:"To"`
+    }
+
+    if err := c.ShouldBind(&status); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // Update your database with the delivery status
+    result := db.Model(&Message{}).Where("phone_number = ?", status.To).Updates(map[string]interface{}{
+        "status":     status.Status,
+        "updated_at": time.Now(),
+    })
+
+    if result.Error != nil {
+        log.Printf("Failed to update message status: %v", result.Error)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+        return
+    }
+
+    c.Status(http.StatusOK)
+}
+
 // messageProcessor runs in background to check for messages to send
 func messageProcessor() {
 	ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
@@ -219,68 +281,55 @@ func messageProcessor() {
 }
 
 func sendDueMessages() {
-	var messages []Message
-	now := time.Now()
-	
-	// Find messages that are due to be sent
-	result := db.Where("status = ? AND scheduled_at <= ?", "pending", now).Find(&messages)
-	if result.Error != nil {
-		log.Printf("Error fetching due messages: %v", result.Error)
-		return
-	}
+    var messages []Message
+    now := time.Now()
+    
+    result := db.Where("status = ? AND scheduled_at <= ?", "pending", now).Find(&messages)
+    if result.Error != nil {
+        log.Printf("Error fetching due messages: %v", result.Error)
+        return
+    }
 
-	for _, message := range messages {
-		success := sendMessage(message)
-		
-		// Update message status
-		if success {
-			message.Status = "sent"
-			log.Printf("Message sent successfully to %s", message.PhoneNumber)
-		} else {
-			message.Status = "failed"
-			log.Printf("Failed to send message to %s", message.PhoneNumber)
-		}
-		
-		message.UpdatedAt = time.Now()
-		db.Save(&message)
-	}
+    // Rate limit to 1 message per second
+    limiter := time.Tick(1 * time.Second)
+    
+    for _, message := range messages {
+        <-limiter // Wait for the rate limiter
+        success := sendMessage(message)
+        
+        if success {
+            message.Status = "sent"
+        } else {
+            message.Status = "failed"
+        }
+        
+        message.UpdatedAt = time.Now()
+        db.Save(&message)
+    }
 }
 
-// sendMessage simulates sending a message (replace with actual SMS API)
 func sendMessage(message Message) bool {
-	// This is a simulation. In production, you would integrate with:
-	// - Twilio API
-	// - AWS SNS
-	// - Firebase Cloud Messaging
-	// - Any other SMS service provider
-	
-	log.Printf("Sending message to %s: %s", message.PhoneNumber, message.Content)
-	
-	// Simulate API call delay
-	time.Sleep(1 * time.Second)
-	
-	// Simulate 95% success rate
-	return time.Now().Unix()%20 != 0
-}
+    maxRetries := 3
+    retryDelay := 2 * time.Second
 
-// For production, replace sendMessage with actual SMS API integration:
-/*
-func sendMessage(message Message) bool {
-	// Example with Twilio
-	client := twilio.NewRestClient()
-	
-	params := &api.CreateMessageParams{}
-	params.SetTo(message.PhoneNumber)
-	params.SetFrom("+1234567890") // Your Twilio phone number
-	params.SetBody(message.Content)
-	
-	resp, err := client.Api.CreateMessage(params)
-	if err != nil {
-		log.Printf("Error sending message: %v", err)
-		return false
-	}
-	
-	log.Printf("Message sent with SID: %s", *resp.Sid)
-	return true
+    params := &api.CreateMessageParams{}
+    params.SetTo(message.PhoneNumber)
+    params.SetFrom(twilioConfig.FromNumber)
+    params.SetBody(message.Content)
+
+    for i := 0; i < maxRetries; i++ {
+        resp, err := twilioClient.Api.CreateMessage(params)
+        if err == nil && resp.Sid != nil {
+            log.Printf("Message sent successfully to %s. SID: %s", message.PhoneNumber, *resp.Sid)
+            return true
+        }
+
+        if i < maxRetries-1 {
+            log.Printf("Attempt %d failed for %s: %v. Retrying...", i+1, message.PhoneNumber, err)
+            time.Sleep(retryDelay)
+        }
+    }
+
+    log.Printf("Failed to send message to %s after %d attempts", message.PhoneNumber, maxRetries)
+    return false
 }
-*/
