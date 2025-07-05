@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { X, Save } from 'lucide-react';
+import { X, Save, Phone, MessageSquare, Clock } from 'lucide-react';
 import { Message } from '@/types/message';
 import { updateMessage } from '@/lib/api';
 
@@ -72,52 +72,64 @@ export default function EditMessageModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">Edit Message</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-900">Edit Message</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
           {/* Phone Number */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Phone className="w-4 h-4 text-blue-500" />
               Phone Number
             </label>
-            <input
-              type="tel"
-              placeholder="+1234567890"
-              className={`input-field ${errors.phoneNumber ? 'border-red-500' : ''}`}
-              {...register('phoneNumber', {
-                required: 'Phone number is required',
-                pattern: {
-                  value: /^\+?[1-9]\d{1,14}$/,
-                  message: 'Please enter a valid phone number'
-                }
-              })}
-            />
+            <div className="relative">
+              <input
+                type="tel"
+                placeholder="+1234567890"
+                className={`w-full px-4 py-3 rounded-lg border text-black ${
+                  errors.phoneNumber 
+                    ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-500'
+                } focus:ring-2 focus:outline-none transition-all`}
+                {...register('phoneNumber', {
+                  required: 'Phone number is required',
+                  pattern: {
+                    value: /^\+?[1-9]\d{1,14}$/,
+                    message: 'Please enter a valid phone number'
+                  }
+                })}
+              />
+            </div>
             {errors.phoneNumber && (
               <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>
             )}
           </div>
 
           {/* Message Content */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <MessageSquare className="w-4 h-4 text-purple-500" />
               Message Content
             </label>
             <textarea
               placeholder="Enter your message here..."
               rows={4}
-              className={`input-field resize-none ${errors.content ? 'border-red-500' : ''}`}
+              className={`w-full px-4 py-3 rounded-lg border ${
+                errors.content 
+                  ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-500'
+              } focus:ring-2 focus:outline-none transition-all resize-none`}
               {...register('content', {
                 required: 'Message content is required',
                 minLength: {
@@ -136,14 +148,19 @@ export default function EditMessageModal({
           </div>
 
           {/* Scheduled Date/Time */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Clock className="w-4 h-4 text-amber-500" />
               Scheduled Date & Time
             </label>
             <input
               type="datetime-local"
               min={getCurrentDateTime()}
-              className={`input-field ${errors.scheduledAt ? 'border-red-500' : ''}`}
+              className={`w-full px-4 py-3 rounded-lg border text-black ${
+                errors.scheduledAt 
+                  ? 'border-red-300 focus:ring-red-200 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-blue-200 focus:border-blue-500'
+              } focus:ring-2 focus:outline-none transition-all`}
               {...register('scheduledAt', {
                 required: 'Scheduled date and time is required',
                 validate: (value) => {
@@ -162,30 +179,30 @@ export default function EditMessageModal({
           </div>
 
           {/* Actions */}
-          <div className="flex space-x-3 pt-4">
+          <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 btn-secondary"
+              className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition-all duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`flex-1 btn-primary flex items-center justify-center space-x-2 ${
-                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+              className={`flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                isSubmitting ? 'opacity-80 cursor-not-allowed' : ''
               }`}
             >
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Updating...</span>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
-                  <span>Update Message</span>
+                  <Save className="w-5 h-5" />
+                  <span>Save Changes</span>
                 </>
               )}
             </button>
