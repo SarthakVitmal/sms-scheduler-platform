@@ -30,6 +30,7 @@ export default function Home() {
 
   const handleMessageScheduled = () => {
     fetchMessages();
+    setActiveTab('messages'); // Switch to messages tab after scheduling
   };
 
   const handleMessageUpdated = () => {
@@ -41,94 +42,134 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-200 to-purple-50 font-[Montserrat]">
+    <div className="min-h-screen bg-gray-50 font-sans">
       <Toaster 
         position="top-center"
         toastOptions={{
           style: {
-            borderRadius: '12px',
-            padding: '16px',
+            borderRadius: '8px',
+            padding: '12px 16px',
             fontSize: '14px',
             fontWeight: '500',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
           },
           success: {
             style: {
-              background: '#4ade80',
-              color: '#166534',
+              background: '#10B981',
+              color: '#FFFFFF',
+            },
+            iconTheme: {
+              primary: '#FFFFFF',
+              secondary: '#10B981',
             },
           },
           error: {
             style: {
-              background: '#f87171',
-              color: '#991b1b',
+              background: '#EF4444',
+              color: '#FFFFFF',
+            },
+            iconTheme: {
+              primary: '#FFFFFF',
+              secondary: '#EF4444',
             },
           },
         }}
       />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold text-gray-800 mb-4">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-                Message Scheduler
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600 max-w-lg mx-auto">
-              Easily schedule and manage your messages with our intuitive platform
-            </p>
-          </div>
+          <header className="mb-12">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                    Message Scheduler Pro
+                  </span>
+                </h1>
+                <p className="text-gray-600 mt-2">
+                  Professional-grade messaging automation platform
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-xs">
+                  <p className="text-xs text-gray-500">Total Messages</p>
+                  <p className="font-semibold text-gray-900">{messages.length}</p>
+                </div>
+                <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-xs">
+                  <p className="text-xs text-gray-500">Pending</p>
+                  <p className="font-semibold text-gray-900">
+                    {messages.filter(m => m.status === 'pending').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </header>
 
-          {/* Tab Navigation */}
-          <div className="flex mb-8 bg-white rounded-xl shadow-sm p-1 border border-gray-200">
-            <button
-              onClick={() => setActiveTab('schedule')}
-              className={`flex-1 py-3 px-6 rounded-lg transition-all duration-200 font-medium text-sm ${
-                activeTab === 'schedule'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Schedule Message
-            </button>
-            <button
-              onClick={() => setActiveTab('messages')}
-              className={`flex-1 py-3 px-6 rounded-lg transition-all duration-200 font-medium text-sm ${
-                activeTab === 'messages'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              View Messages
-              <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                {messages.length}
-              </span>
-            </button>
-          </div>
+          {/* Main Content */}
+          <main className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+              <nav className="flex">
+                <button
+                  onClick={() => setActiveTab('schedule')}
+                  className={`px-6 py-4 text-sm font-medium transition-all duration-200 relative ${
+                    activeTab === 'schedule'
+                      ? 'text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Schedule Message
+                  {activeTab === 'schedule' && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('messages')}
+                  className={`px-6 py-4 text-sm font-medium transition-all duration-200 relative ${
+                    activeTab === 'messages'
+                      ? 'text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Message History
+                  {activeTab === 'messages' && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></span>
+                  )}
+                </button>
+              </nav>
+            </div>
 
-          {/* Content */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 transition-all duration-300 hover:shadow-2xl">
-            {activeTab === 'schedule' ? (
-              <MessageScheduler onMessageScheduled={handleMessageScheduled} />
-            ) : (
-              <MessageList
-                messages={messages}
-                loading={loading}
-                onMessageUpdated={handleMessageUpdated}
-                onMessageDeleted={handleMessageDeleted}
-              />
-            )}
-          </div>
+            {/* Content Area */}
+            <div className="p-6">
+              {activeTab === 'schedule' ? (
+                <MessageScheduler onMessageScheduled={handleMessageScheduled} />
+              ) : (
+                <MessageList
+                  messages={messages}
+                  loading={loading}
+                  onMessageUpdated={handleMessageUpdated}
+                  onMessageDeleted={handleMessageDeleted}
+                />
+              )}
+            </div>
+          </main>
         </div>
       </div>
-      <footer className="text-center py-8 mt-12 bg-white bg-opacity-50">
-        <p className="text-gray-600 text-sm">
-          &copy; {new Date().getFullYear()} Message Scheduler. All rights reserved.
-        </p>
-        <p className="text-gray-500 text-xs mt-1">
-          Crafted with ❤️ by Sarthak Vitmal
-        </p>
+
+      <footer className="mt-12 py-6 border-t border-gray-200">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-sm text-gray-500">
+              &copy; {new Date().getFullYear()} Message Scheduler Pro. All rights reserved.
+            </p>
+            <div className="flex gap-4 mt-4 md:mt-0">
+              <a href="/terms" className="text-sm text-gray-500 hover:text-gray-700">Terms</a>
+              <a href="/privacy" className="text-sm text-gray-500 hover:text-gray-700">Privacy</a>
+              <a href="/contact" className="text-sm text-gray-500 hover:text-gray-700">Contact</a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );
