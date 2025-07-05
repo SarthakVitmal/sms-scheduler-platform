@@ -213,11 +213,8 @@ func messageProcessor() {
 	ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			sendDueMessages()
-		}
+	for range ticker.C {
+		sendDueMessages()
 	}
 }
 
